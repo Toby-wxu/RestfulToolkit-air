@@ -26,14 +26,38 @@ public class GotoRequestMappingProvider extends DefaultChooseByNameItemProvider 
         super(context);
     }
 
+    /**
+     * Kept alongside the {@link FindSymbolParameters} overload on purpose: recent builds route every
+     * {@code filterElements} entry point through that one, but the String-shaped entry still exists and
+     * older builds are free to reach it directly.
+     */
+    @Override
+    public boolean filterElementsWithWeights(@NotNull ChooseByNameViewModel base,
+                                             @NotNull String pattern,
+                                             boolean everywhere,
+                                             @NotNull ProgressIndicator indicator,
+                                             @NotNull Processor<? super FoundItemDescriptor<?>> consumer) {
+        return filterServices(base, ToolkitUtil.removeRedundancyMarkup(pattern), everywhere, indicator, consumer);
+    }
+
     @Override
     public boolean filterElementsWithWeights(@NotNull ChooseByNameViewModel base,
                                              @NotNull FindSymbolParameters parameters,
                                              @NotNull ProgressIndicator indicator,
                                              @NotNull Processor<? super FoundItemDescriptor<?>> consumer) {
+        return filterServices(base,
+                ToolkitUtil.removeRedundancyMarkup(parameters.getCompletePattern()),
+                parameters.isSearchInLibraries(),
+                indicator,
+                consumer);
+    }
+
+    private static boolean filterServices(@NotNull ChooseByNameViewModel base,
+                                          @NotNull String pattern,
+                                          boolean everywhere,
+                                          @NotNull ProgressIndicator indicator,
+                                          @NotNull Processor<? super FoundItemDescriptor<?>> consumer) {
         ChooseByNameModel model = base.getModel();
-        String pattern = ToolkitUtil.removeRedundancyMarkup(parameters.getCompletePattern());
-        boolean everywhere = parameters.isSearchInLibraries();
 
         for (String name : model.getNames(everywhere)) {
             indicator.checkCanceled();
