@@ -34,19 +34,19 @@
 | 插件平台 | JetBrains IntelliJ Platform Gradle Plugin 2.13.0 |
 | 依赖插件 | Java、Kotlin、Properties、YAML（IDEA 内置，无需额外安装） |
 
-插件 ID `me.kkk.restful.toolkit`，版本 `2.1.6`。Java 源码包名沿用上游的 `com.zhaow.*`。
+插件 ID `com.fengjianliang.restful.toolkit`，版本 `2.1.7`。Java 源码包名沿用上游的 `com.zhaow.*`。
 
 ## 安装
 
 **方式一：插件市场**
 
 `Settings/Preferences ▸ Plugins ▸ Marketplace` 搜索 **RestfulToolkit-air**，安装后重启 IDE。
-市场页面：https://plugins.jetbrains.com/plugin/16788-restfultoolkit-air
+（市场页面地址待上架后补充）
 
 **方式二：本地构建后安装**
 
 ```bash
-./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-2.1.6.zip
+./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-2.1.7.zip
 ```
 
 然后 `Settings ▸ Plugins ▸ ⚙ ▸ Install Plugin from Disk...` 选择该 zip。
@@ -237,5 +237,17 @@ src/main/resources/META-INF/plugin.xml   # 扩展点、动作与快捷键注册
 
 ## 许可证与致谢
 
-本项目基于 [Apache-2.0 LICENSE](LICENSE) 发布，沿用上游 RestfulToolkit 的代码与授权条款，
-感谢原作者 [mrmanzhaow](https://github.com/mrmanzhaow) 以及所有贡献者。
+本项目基于 [Apache-2.0 LICENSE](LICENSE) 发布，沿用上游 [RestfulToolkit](https://github.com/mrmanzhaow/RestfulToolkit)
+（作者 [mrmanzhaow](https://github.com/mrmanzhaow)）的代码与授权条款，并经其修复分支 RestfulToolkit-fix 演进而来。
+
+按 Apache-2.0 的要求，第三方来源文件的版权声明与作者署名**全部原样保留**，未被改写或删除：
+
+| 文件 | 来源 | 保留内容 |
+| --- | --- | --- |
+| `restful/common/spring/AntPathMatcher.java` | Spring Framework | `Copyright 2002-2017 the original author or authors` + Apache 2.0 头 + `@author` 列表（Arendsen / Hoeller / Harrop / Poutsma / Stoyanchev / Brannen） |
+| `restful/common/spring/StringUtils.java` | Spring Framework | 同上 |
+| `restful/navigation/action/RestServiceChooseByNamePopup.java`、`restful/navigator/RestServiceProjectsManager.java` | JetBrains s.r.o. | `Copyright 2000-2017 JetBrains s.r.o.` + Apache 2.0 头 |
+
+源码 Java 包名沿用上游的 `com.zhaow.*`，未做重命名（重命名会破坏与上游的对照，也与上述署名无关）。
+`plugin.xml` 中的 `<vendor>` 已改为本项目维护者信息，因为 Marketplace 的发布者必须与实际上传账号一致；
+上游的 `<change-notes>` 版本历史（1.0.3 ~ 2.1.6）完整保留，本分支的改动单独记为 2.1.7。

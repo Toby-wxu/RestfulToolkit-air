@@ -3,8 +3,8 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.13.0"
 }
 
-group = "me.kkk.restful.toolkit"
-version = "2.1.6"
+group = "com.fengjianliang.restful.toolkit"
+version = "2.1.7"
 
 java {
     // Resolved from the local JDK or a downloaded one; never hardcode org.gradle.java.home,
