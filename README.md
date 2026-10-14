@@ -1,7 +1,7 @@
 # RestfulToolkit-air
 
 > 一套 IntelliJ IDEA 的 RESTful 服务开发辅助工具集 —— RestfulToolkit 的维护分支，
-> 支持 IntelliJ IDEA 2025.1 ~ 2026.2，并修复了原版在新版本 IDE 上的不兼容与崩溃问题。
+> 支持 IntelliJ IDEA 2022.2 ~ 2026.2，搜索窗口从 2022.3 起使用工具栏筛选与紧凑接口列表。
 
 原项目：[mrmanzhaow/RestfulToolkit](https://github.com/mrmanzhaow/RestfulToolkit)
 
@@ -29,13 +29,27 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| IDE | IntelliJ IDEA 2025.1 (build 251) ~ 2026.2 (build 262.\*)，Ultimate / Community 均可 |
-| JDK | 构建与运行需 **JDK 21**（由 `gradle/gradle-daemon-jvm.properties` 按版本锁定，不绑定本机路径） |
+| IDE | IntelliJ IDEA 2022.2 (build 222) ~ 2026.2 (build 262.\*)，Ultimate / Community 均可 |
+| JDK | 构建使用 **JDK 21**；插件字节码为 **Java 17**，运行使用对应 IDEA 自带的 JBR（2022.2 起为 17，2024.2 起为 21） |
 | Gradle | Wrapper 9.0.0 |
 | 插件平台 | JetBrains IntelliJ Platform Gradle Plugin 2.13.0 |
 | 依赖插件 | Java、Kotlin、Properties、YAML（IDEA 内置，无需额外安装） |
 
 插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.0`。Java 源码包名沿用上游的 `com.zhaow.*`。
+
+搜索窗口使用以下规则，**安装范围和界面切换是两项独立判断**：
+
+| IDE 版本 | 搜索窗口 |
+| --- | --- |
+| 2022.2（222） | 原有布局，保留输入提示、模块和 HTTP 方法下拉 |
+| 2022.3（223）及以上 | 顶部工具栏筛选、完整宽度搜索框、HTTP 方法文字标识、URL / Controller 分列、底部源码位置 |
+| 2022.2 之前 / 2026.2 之后 | 不在此版本插件的安装范围内 |
+
+判断只看 build 基线，不看 New UI / Classic UI：平台里回答"当前是不是 New UI"的
+`ExperimentalUI` 是 `@ApiStatus.Internal`，插件校验器会直接报"Internal API is used"，而 SDK 里没有公开的替代
+（`JBUI` / `UIUtil` / `UISettings` / `UIService` 都查不到这个开关）。去读 `ExperimentalUI` 自己存的那几个
+`PropertiesComponent` 键虽然算"公开 API"，但等于依赖别人的私有状态，版本一变就静默失效，所以也没走这条路。
+代价是：2022.3 及以上即使切到 Classic UI，也会用这套工具栏布局 —— 只是外观差异，功能一致。
 
 ### 版本号规则
 
@@ -93,10 +107,17 @@
 - **Ant 风格路径匹配**：声明式路径里的占位符可直接命中真实 URL —— `/product/{productId}` 匹配 `/product/42`；
   `*` 匹配单段内任意字符，`**` 跨段匹配，还支持 `{name:[a-z-]+}` 这种内嵌正则（由内置的 `AntPathMatcher` 提供）。
 - **模糊匹配**：同时使用 IDE 的 `MinusculeMatcher` 做大小写不敏感的子串/缩写匹配，输入 `prodlist` 也能找到 `/product/list`。
-- **HTTP 方法过滤**：搜索框下方提供方法过滤标签（GET/POST/…），隐藏与高亮状态按项目持久化在 `.idea/workspace.xml`。
-- **模块范围**：搜索框那一行的 `All Modules` 下拉可把搜索限定到单个模块，选择按项目记住，下次打开仍生效。
+- **HTTP 方法过滤**：搜索框上方的 `All Methods` 下拉可切换成只看某一个方法（GET / POST / …），选择按项目记住；2022.3 起选中某个方法时下拉会变成强调色。
+  平台自带的漏斗过滤器在本插件里从未生效（它的 action 每次都被 ActionManager 以"上下文组件未显示"拒绝），
+  因此换成这个下拉，并删掉了配套的 `ChooseByNameFilter` 与 `GotoRequestMappingConfiguration`。
+- **模块范围**：搜索框上方的 `All Modules` 下拉可把搜索限定到单个模块，选择按项目记住，下次打开仍生效。
   模块少于两个时不显示该下拉。原先的 `Only This Module` 复选框已移除（它取的是编辑器当前文件所属模块，
   从快捷键打开时经常为空或落在聚合模块上，导致勾选后直接"无结果"）。
+- **图钉按钮（Show All in View）已隐藏**：它的作用是把列表里的接口当作 target 打开 Usage View（去找这些 Controller 方法的调用点），
+  对"按 URL 跳到定义"这个场景没有意义。平台以 find-usages 标题是否为空决定这个按钮的可见性，所以本插件打开弹窗时传 `null`，
+  按钮不再出现在搜索框右侧。
+- **工具栏布局（2022.3 起）**：标题简化为 `RESTful Toolkit`，筛选与搜索分开；结果保持紧凑单行，完整 HTTP 方法名位于左侧，Controller 位于右侧，避免相同 `/{id}` 路径难以区分。
+  底部显示选中接口的 `Controller#method`、当前已加载接口数和快捷键提示；旧 UI 保留原生结果渲染及历史提示。浅色 / 深色、缩放、搜索高亮和原生键盘导航继续跟随 IDE。
 
 ### 2. Services Tree 工具窗口
 
@@ -201,7 +222,7 @@ public class ProductController {
 
 ## 与上游的差异
 
-- 迁移到 IntelliJ Platform Gradle Plugin 2.x + Gradle 9 + JDK 21，适配 IDEA 2025.1 ~ 2026.2 的新 API，原版在新 IDE 上的不兼容报错已消除。
+- 迁移到 IntelliJ Platform Gradle Plugin 2.x + Gradle 9 + JDK 21 构建工具链，以 Java 17 字节码兼容 IDEA 2022.2 起的运行环境；搜索窗口按 build 基线（223）分流。
 - 组件注册改为 `@Service` 注解与 `projectService`，替换已弃用的 `project-components` / `application-components`。
 - 服务树扫描从 EDT 移到后台 ReadAction；修复 Spring / Kotlin 解析过程中的 `ClassCastException`、`IndexOutOfBoundsException`、NPE。
 - 补齐并修复 Kotlin Spring 路由解析，兼容新版 Kotlin PSI API。
@@ -219,7 +240,7 @@ public class ProductController {
 ./gradlew runIde        # 启动沙箱 IDE 调试插件
 ./gradlew test          # 运行单元测试
 ./gradlew buildPlugin   # 打包 zip 到 build/distributions/
-./gradlew verifyPlugin  # 校验 plugin.xml 兼容性
+./gradlew verifyPlugin  # 检查插件的二进制兼容性
 ```
 
 单元测试为纯逻辑测试（不依赖 IDE 运行期），覆盖 Ant 路径匹配、`RequestPath` 路径拼接、URL 输入清洗等：
@@ -231,6 +252,21 @@ src/test/java/com/zhaow/utils/ToolkitUtilTest
 ```
 
 首次构建会下载 IntelliJ IDEA 发行版到 `.intellijPlatform/`，体积较大；本地机器相关的 IDE/JDK 路径配置放在 `local.properties`，已被 git 忽略，不要提交。
+
+编译 SDK 为 2025.1，`--release 17` 限制 JDK API 与字节码版本；旧平台 API 兼容性还必须通过 Plugin Verifier 检查，不能仅凭 `sinceBuild` 判断。
+`verifyPlugin` 默认检查 2022.3.3 和 2025.1；可通过 `-PcompatibilityIdePaths="<IDE目录1>;<IDE目录2>"` 使用已经解压的本地 IDE，避免重复下载。此入口的 IDE 解析器要求 build 223 起。
+
+2022.2 的二进制兼容检查使用 [JetBrains 官方独立 Plugin Verifier](https://github.com/JetBrains/intellij-plugin-verifier)，下载其 `verifier-cli-<version>-all.jar` 并解压 IDEA 2022.2.5 后运行：
+
+```bash
+java -jar <verifier-all.jar> check-plugin build/distributions/RestfulToolkit-air-1.0.0.zip <IDEA-2022.2.5目录> -verification-reports-dir build/reports/legacyPluginVerifier
+```
+
+版本范围包含的其他 IDEA 版本仍建议在发布前补充验证，尤其是 2026.2。
+
+本次验证：2022.2.5、2022.3.3、2025.1 的 Plugin Verifier 均未发现二进制兼容错误；仍有资源键弃用、弃用 API 和 `ExperimentalUI` 内部 API 使用提示。源码已通过 2022.2.5 SDK 编译，常规构建与 28 项单元测试通过。界面交互仍需按下列清单在 IDE 中回归。
+
+UI 回归检查：在 2022.2 验证旧布局；在 2022.3+ 的 New UI 与 Classic UI 下（两者走同一套布局）检查模块与 HTTP 筛选、搜索历史、同路径不同 Controller、方向键 / 回车跳转，以及浅色 / 深色和缩放。
 
 ## 项目结构
 
