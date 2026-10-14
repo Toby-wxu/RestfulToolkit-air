@@ -1,7 +1,9 @@
 package com.zhaow.restful.navigation.action;
 
+import com.intellij.ide.util.EditSourceUtil;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.navigation.NavigationItem;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.module.Module;
 import com.intellij.pom.Navigatable;
 import com.intellij.psi.PsiClass;
@@ -66,10 +68,21 @@ public class RestServiceItem implements NavigationItem {
         return new RestServiceItemPresentation();
     }
 
+    /**
+     * The goto popup delivers {@code elementChosen} on the EDT without a read action, and resolving
+     * the target offset walks PSI (asserted since 2024.2). The descriptor is therefore built under
+     * a read action and the editor is opened outside it, so no UI work happens under the lock.
+     */
     @Override
     public void navigate(boolean requestFocus) {
-        if (navigationElement != null) {
-            navigationElement.navigate(requestFocus);
+        if (psiElement == null || navigationElement == null) {
+            return;
+        }
+        PsiElement element = psiElement;
+        Navigatable target = ReadAction.<Navigatable, RuntimeException>compute(
+                () -> element.isValid() ? EditSourceUtil.getDescriptor(element) : null);
+        if (target != null) {
+            target.navigate(requestFocus);
         }
     }
 
