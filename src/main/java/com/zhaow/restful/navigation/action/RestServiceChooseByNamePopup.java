@@ -21,14 +21,24 @@ import com.intellij.ide.util.gotoByName.ChooseByNamePopup;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.ui.JBColor;
+import com.intellij.util.ui.JBUI;
+import com.intellij.util.ui.UIUtil;
 import com.zhaow.utils.ToolkitUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.JComponent;
 import javax.swing.JPanel;
+import javax.swing.JLabel;
+import javax.swing.SwingConstants;
 import java.awt.BorderLayout;
 import java.awt.Container;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.util.List;
 
 public class RestServiceChooseByNamePopup extends ChooseByNamePopup {
   public static final Key<RestServiceChooseByNamePopup> CHOOSE_BY_NAME_POPUP_IN_PROJECT_KEY = new Key<>("ChooseByNamePopup");
@@ -37,24 +47,93 @@ public class RestServiceChooseByNamePopup extends ChooseByNamePopup {
     super(project, model, provider, oldPopup, predefinedText, mayRequestOpenInCurrentWindow, initialIndex);
   }
 
-  private JComponent myModuleSelector;
+  private @NotNull List<JComponent> myToolComponents = List.of();
+  private boolean myToolbarInstalled;
+
+  private boolean usesToolbarUi() {
+    return getModel() instanceof GotoRequestMappingModel model && model.usesToolbarUi();
+  }
 
   /**
-   * The module drop-down for the caption row. {@code ChooseByNameBase#setToolArea} cannot be used:
-   * {@code ChooseByNameFilter} claims that single slot from its own constructor.
+   * Drop-downs for the caption row, in display order. {@code ChooseByNameBase#setToolArea} cannot be
+   * used: {@code ChooseByNameFilter} claims that single slot from its own constructor.
    */
-  public void setModuleSelector(@Nullable JComponent selector) {
-    this.myModuleSelector = selector;
+  public void setToolComponents(@NotNull List<JComponent> components) {
+    myToolComponents = components;
   }
 
   @Override
   protected void showTextFieldPanel() {
-    insertIntoToolsRow(myModuleSelector);
+    insertIntoToolsRow();
+    if (usesToolbarUi()) {
+      installToolbarLayout();
+    }
     super.showTextFieldPanel();
   }
 
-  private void insertIntoToolsRow(@Nullable JComponent selector) {
-    if (selector == null || selector.getParent() != null) {
+  private void installToolbarLayout() {
+    if (myToolbarInstalled) return;
+    Container parent = getTextField().getParent();
+    if (!(parent instanceof JComponent textPanel) || parent.getComponentCount() == 0
+            || !(parent.getComponent(0) instanceof JPanel caption)
+            || !(caption.getLayout() instanceof BorderLayout layout)) return;
+
+    Component title = layout.getLayoutComponent(BorderLayout.WEST);
+    if (title instanceof JLabel label) {
+      label.setFont(UIUtil.getLabelFont().deriveFont(Font.PLAIN));
+    }
+    caption.setBorder(JBUI.Borders.empty(8, 4, 10, 0));
+    caption.setBackground(JBColor.namedColor("Popup.Header.background", UIUtil.getPanelBackground()));
+    textPanel.setBackground(caption.getBackground());
+    textPanel.setBorder(JBUI.Borders.empty(8, 12, 10, 12));
+    // Use a minimum rather than a fixed popup size; long paths and IDE scaling remain usable.
+    Dimension minimum = textPanel.getPreferredSize();
+    textPanel.setMinimumSize(new Dimension(Math.max(JBUI.scale(640), minimum.width), minimum.height));
+    getTextField().setColumns(56);
+    getTextField().getAccessibleContext().setAccessibleName("Search service URL");
+    getTextField().setToolTipText("Search a service URL; use the toolbar to filter modules and HTTP methods");
+    myToolbarInstalled = true;
+  }
+
+  @Override
+  public String getAdText() {
+    if (!usesToolbarUi()) return super.getAdText();
+    Object selected = myList.getSelectedValue();
+    String location = selected instanceof RestServiceItem item ? RestServiceCellRenderer.sourceLocation(item) : "";
+    long count = 0;
+    for (int index = 0; index < myList.getModel().getSize(); index++) {
+      if (myList.getModel().getElementAt(index) instanceof RestServiceItem) count++;
+    }
+    return "<html>" + StringUtil.escapeXmlEntities(location.isEmpty() ? "Select an endpoint" : location)
+            + "<br>↑ ↓ Navigate &nbsp; Enter Go to source &nbsp; Alt ↑ / ↓ History &nbsp; · &nbsp; "
+            + count + " endpoints</html>";
+  }
+
+  @Override
+  protected void chosenElementMightChange() {
+    super.chosenElementMightChange();
+    updateToolbarFooter();
+  }
+
+  @Override
+  protected void showList() {
+    super.showList();
+    updateToolbarFooter();
+  }
+
+  private void updateToolbarFooter() {
+    if (usesToolbarUi() && myDropdownPopup != null && !myDropdownPopup.isDisposed()) {
+      myDropdownPopup.setAdText(getAdText(), SwingConstants.LEFT);
+    }
+  }
+
+  /**
+   * The selectors get a row of their own in the caption's East slot. The platform's tool row cannot
+   * host them: it also carries an empty 24px tool-area placeholder and the nowrap action toolbar, and
+   * the width those claim leaves the selectors well short of the right edge.
+   */
+  private void insertIntoToolsRow() {
+    if (myToolComponents.isEmpty()) {
       return;
     }
     Container textPanel = getTextField().getParent();
@@ -64,9 +143,18 @@ public class RestServiceChooseByNamePopup extends ChooseByNamePopup {
     if (!(caption.getLayout() instanceof BorderLayout layout)) {
       return;
     }
-    if (layout.getLayoutComponent(BorderLayout.EAST) instanceof JComponent tools) {
-      tools.add(selector, 0);
+    JPanel selectors = new JPanel(new FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0));
+    selectors.setOpaque(false);
+    for (JComponent component : myToolComponents) {
+      if (component.getParent() == null) {
+        selectors.add(component);
+      }
     }
+    Component platformTools = layout.getLayoutComponent(BorderLayout.EAST);
+    if (platformTools != null) {
+      caption.remove(platformTools);
+    }
+    caption.add(selectors, BorderLayout.EAST);
   }
 
   public static RestServiceChooseByNamePopup createPopup(final Project project,

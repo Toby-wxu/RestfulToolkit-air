@@ -3,7 +3,6 @@ package com.zhaow.restful.navigation.action;
 import com.intellij.featureStatistics.FeatureUsageTracker;
 import com.intellij.ide.actions.GotoActionBase;
 import com.intellij.ide.util.PropertiesComponent;
-import com.intellij.ide.util.gotoByName.ChooseByNameFilter;
 import com.intellij.ide.util.gotoByName.ChooseByNameItemProvider;
 import com.intellij.ide.util.gotoByName.ChooseByNameModel;
 import com.intellij.ide.util.gotoByName.ChooseByNamePopup;
@@ -15,6 +14,10 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.ComboBox;
+import com.intellij.ui.JBColor;
+import com.intellij.util.ui.JBUI;
+import com.intellij.util.ui.UIUtil;
 import com.intellij.openapi.util.Pair;
 import com.intellij.psi.PsiElement;
 import com.zhaow.restful.method.HttpMethod;
@@ -24,13 +27,16 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.Dimension;
 import java.awt.datatransfer.DataFlavor;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 
 public class GotoRequestMappingAction extends GotoActionBase implements DumbAware {
     private static final String ALL_MODULES = "All Modules";
+    private static final String ALL_METHODS = "All Methods";
     private static final String MODULE_SCOPE_KEY = "GoToRestService.ModuleScope";
+    private static final String METHOD_FILTER_KEY = "GoToRestService.MethodFilter";
 
     public GotoRequestMappingAction() {
     }
@@ -47,15 +53,10 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
         restorePersistedScope(project, contributor);
 
         final GotoRequestMappingModel model = new GotoRequestMappingModel(project, contributor);
-
-//        GotoRequestMappingCallback callback = new GotoRequestMappingCallback();
+        HttpMethod persistedMethod = persistedMethod(project);
+        model.setVisibleMethods(persistedMethod == null ? null : List.of(persistedMethod));
 
         GotoActionCallback<HttpMethod> callback = new GotoActionCallback<HttpMethod>() {
-            @Override
-            protected ChooseByNameFilter<HttpMethod> createFilter(@NotNull ChooseByNamePopup popup) {
-                return new GotoRequestMappingFilter(popup, model, project);
-            }
-
             @Override
             public void elementChosen(ChooseByNamePopup chooseByNamePopup, Object element) {
                 if (element instanceof RestServiceItem) {
@@ -69,7 +70,8 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
 
 //        this.showNavigationPopup(e, model, callback, false);
         GotoRequestMappingProvider provider = new GotoRequestMappingProvider(getPsiContext(e));
-        showNavigationPopup(e, model, callback, "Request Mapping Url matching pattern", true, true, (ChooseByNameItemProvider)provider);
+        // A null find-usages title is the platform's own switch for hiding the "show all in view" button.
+        showNavigationPopup(e, model, callback, null, true, true, (ChooseByNameItemProvider)provider);
 //        showNavigationPopup(callback,"Request Mapping Url matching pattern",);
 
     }
@@ -97,11 +99,92 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
 
         RestServiceChooseByNamePopup popup = RestServiceChooseByNamePopup.createPopup(project, model, itemProvider,
                 predefinedText, mayRequestOpenInCurrentWindow, start.second);
-        // Not ChooseByNameBase#setToolArea: ChooseByNameFilter claims that slot in its own
-        // constructor, and the slot accepts a single component before invoke().
-        popup.setModuleSelector(createModuleSelector(popup, ((GotoRequestMappingModel) model).getContributor(), project));
+        GotoRequestMappingModel gotoModel = (GotoRequestMappingModel) model;
+        List<JComponent> tools = new ArrayList<>();
+        JComponent moduleSelector = createModuleSelector(popup, gotoModel.getContributor(), project, gotoModel.usesToolbarUi());
+        if (moduleSelector != null) {
+            tools.add(moduleSelector);
+        }
+        tools.add(createMethodSelector(popup, gotoModel, project));
+        popup.setToolComponents(tools);
 
         showNavigationPopup(callback, findUsagesTitle, popup, allowMultipleSelection);
+    }
+
+    /**
+     * Single-select HTTP method filter. The platform's own funnel is not used: in this popup its
+     * action never reaches {@code actionPerformed} because ActionManager rejects it with a context
+     * component that is not showing.
+     */
+    private static JComponent createMethodSelector(ChooseByNamePopup popup,
+                                                   GotoRequestMappingModel model,
+                                                   @NotNull Project project) {
+        List<HttpMethod> methods = Arrays.asList(HttpMethod.values());
+        String[] labels = new String[methods.size() + 1];
+        labels[0] = ALL_METHODS;
+        for (int i = 0; i < methods.size(); i++) {
+            labels[i + 1] = methods.get(i).name();
+        }
+
+        JComboBox<String> selector = model.usesToolbarUi() ? new ComboBox<>(labels) : new JComboBox<>(labels);
+        HttpMethod current = persistedMethod(project);
+        selector.setSelectedIndex(current == null ? 0 : methods.indexOf(current) + 1);
+        selector.setToolTipText("Show only one HTTP method");
+        applyCompactWidth(selector);
+        selector.getAccessibleContext().setAccessibleName("HTTP method filter");
+        if (model.usesToolbarUi()) {
+            applyToolbarWidth(selector, 112);
+            updateMethodFilterAppearance(selector);
+        }
+
+        selector.addActionListener(event -> {
+            int index = selector.getSelectedIndex();
+            HttpMethod method = index <= 0 ? null : methods.get(index - 1);
+            model.setVisibleMethods(method == null ? null : List.of(method));
+            PropertiesComponent.getInstance(project)
+                    .setValue(METHOD_FILTER_KEY, method == null ? null : method.name());
+            if (model.usesToolbarUi()) updateMethodFilterAppearance(selector);
+            popup.rebuildList(false);
+        });
+
+        return selector;
+    }
+
+    @Nullable
+    private static HttpMethod persistedMethod(@NotNull Project project) {
+        String name = PropertiesComponent.getInstance(project).getValue(METHOD_FILTER_KEY);
+        if (name == null) {
+            return null;
+        }
+        for (HttpMethod method : HttpMethod.values()) {
+            if (method.name().equals(name)) {
+                return method;
+            }
+        }
+        return null;
+    }
+
+    private static void applyCompactWidth(JComponent component) {
+        Dimension preferred = component.getPreferredSize();
+        Dimension size = new Dimension(Math.min(preferred.width, 180), preferred.height);
+        component.setPreferredSize(size);
+        component.setMaximumSize(size);
+    }
+
+    private static void applyToolbarWidth(JComponent component, int width) {
+        Dimension size = new Dimension(JBUI.scale(width), Math.max(JBUI.scale(32), component.getPreferredSize().height));
+        component.setPreferredSize(size);
+        component.setMinimumSize(size);
+        component.setMaximumSize(size);
+    }
+
+    private static void updateMethodFilterAppearance(JComboBox<String> selector) {
+        boolean filtered = selector.getSelectedIndex() > 0;
+        selector.setForeground(filtered
+                ? JBColor.namedColor("Link.activeForeground", new JBColor(0x3574F0, 0x6C95EB))
+                : UIUtil.getLabelForeground());
+        selector.setToolTipText(filtered ? "HTTP method: " + selector.getSelectedItem() + "; choose All Methods to clear"
+                : "Show all HTTP methods");
     }
 
     /**
@@ -111,7 +194,7 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
     @Nullable
     private static JComponent createModuleSelector(ChooseByNamePopup popup,
                                                    GotoRequestMappingContributor contributor,
-                                                   @NotNull Project project) {
+                                                   @NotNull Project project, boolean toolbarUi) {
         List<Module> modules = Arrays.asList(ModuleManager.getInstance(project).getModules());
         if (modules.size() < 2) {
             return null;
@@ -123,16 +206,14 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
             labels[i + 1] = modules.get(i).getName();
         }
 
-        JComboBox<String> selector = new JComboBox<>(labels);
+        JComboBox<String> selector = toolbarUi ? new ComboBox<>(labels) : new JComboBox<>(labels);
         Module scope = contributor.getScope();
         int initial = scope == null ? 0 : modules.indexOf(scope) + 1;
         selector.setSelectedIndex(Math.max(initial, 0));
         selector.setToolTipText("Limit the search to one module");
-
-        Dimension preferred = selector.getPreferredSize();
-        Dimension size = new Dimension(Math.min(preferred.width, 180), preferred.height);
-        selector.setPreferredSize(size);
-        selector.setMaximumSize(size);
+        applyCompactWidth(selector);
+        selector.getAccessibleContext().setAccessibleName("Module scope");
+        if (toolbarUi) applyToolbarWidth(selector, 160);
 
         selector.addActionListener(event -> {
             int index = selector.getSelectedIndex();
@@ -190,37 +271,6 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
             }
         }
     }*/
-
-    protected static class GotoRequestMappingFilter extends ChooseByNameFilter<HttpMethod> {
-        GotoRequestMappingFilter(final ChooseByNamePopup popup, GotoRequestMappingModel model, final Project project) {
-            super(popup, model, GotoRequestMappingConfiguration.getInstance(project), project);
-        }
-
-        @Override
-        @NotNull
-        protected List<HttpMethod> getAllFilterValues() {
-//            List<HttpMethod> elements = new ArrayList<>();
-            /*elements.add(HttpMethod.GET);
-            elements.add(HttpMethod.POST);
-            elements.add(HttpMethod.DELETE);
-            elements.add(HttpMethod.PATCH);*/
-            List<HttpMethod> elements = Arrays.asList(HttpMethod.values());
-
-            return elements;
-        }
-
-        @Override
-        protected String textForFilterValue(@NotNull HttpMethod value) {
-            return value.name();
-        }
-
-        @Override
-        protected Icon iconForFilterValue(@NotNull HttpMethod value) {
-//            return value.getIcon();
-            return null;
-        }
-    }
-
 
     //找到文件
     private PsiElement getElement(PsiElement element, ChooseByNamePopup chooseByNamePopup) {

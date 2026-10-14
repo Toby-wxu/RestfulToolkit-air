@@ -23,10 +23,20 @@ import java.util.Collection;
 public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> implements DumbAware, CustomMatcherModel {
 
     private final GotoRequestMappingContributor myContributor;
+    private final boolean myToolbarUi;
+
+    /** Null means "no method filter"; see {@link #setVisibleMethods}. */
+    @Nullable
+    private Collection<HttpMethod> myVisibleMethods;
 
     protected GotoRequestMappingModel(@NotNull Project project, @NotNull GotoRequestMappingContributor contributor) {
         super(project, new ChooseByNameContributor[]{contributor});
         this.myContributor = contributor;
+        this.myToolbarUi = RestSearchUi.useToolbar();
+    }
+
+    public boolean usesToolbarUi() {
+        return myToolbarUi;
     }
 
     /** The popup's module drop-down writes its selection through this contributor. */
@@ -34,11 +44,14 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
     public GotoRequestMappingContributor getContributor() {
         return myContributor;
     }
-// 设置过滤项
-/*    @Override
-    public synchronized void setFilterItems(Collection<HttpMethod> filterItems) {
-        super.setFilterItems(filterItems);
-    }*/
+
+    /**
+     * {@code FilteringGotoByModel#setFilterItems} cannot express "show every method" — an empty
+     * collection hides all of them — so the filter state lives here, with null meaning unfiltered.
+     */
+    public synchronized void setVisibleMethods(@Nullable Collection<HttpMethod> visibleMethods) {
+        myVisibleMethods = visibleMethods;
+    }
 
     @Nullable
     @Override
@@ -50,28 +63,15 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
         return null;
     }
 
-    /* 可选项 */
     @Nullable
     @Override
     protected synchronized Collection<HttpMethod> getFilterItems() {
-        /*final Collection<Language> result = super.getFilterItems();
-        if (result == null) {
-            return null;
-        }
-        final Collection<Language> items = new HashSet<>(result);
-        items.add(Language.ANY);
-        return items;*/
-
-/*        ArrayList items = new ArrayList();
-        items.add(HttpMethod.POST);
-        return items;*/
-        return super.getFilterItems();
-
+        return myVisibleMethods;
     }
 
     @Override
     public String getPromptText() {
-        return "Enter service URL path :";
+        return myToolbarUi ? "RESTful Toolkit" : "Enter service URL path :";
     }
 
     @Override
@@ -170,7 +170,7 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
     @Override
     public ListCellRenderer getListCellRenderer() {
 
-        return super.getListCellRenderer();
+        return myToolbarUi ? new RestServiceCellRenderer(super.getListCellRenderer()) : super.getListCellRenderer();
     }
 
 

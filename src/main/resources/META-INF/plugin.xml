@@ -29,18 +29,22 @@
     <li>Java / Kotlin 实体类转 JSON、压缩 JSON、批量字段值；<em>Ctrl/Cmd + Enter</em> 格式化 JSON。</li>
   </ul>
   <p>支持 Spring 体系（Spring MVC / Spring Boot）与 JAX-RS，支持 Java 和 Kotlin 语言。</p>
-  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，支持 IntelliJ IDEA 2025.1 ~ 2026.2。</p>
+  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，支持 IntelliJ IDEA 2022.2 ~ 2026.2，搜索窗口自 2022.3 起使用工具栏筛选布局。</p>
     ]]></description>
 
     <change-notes><![CDATA[
         <li>本分支继承自上游 RestfulToolkit（作者 mrmanzhaow）及其修复版 RestfulToolkit-fix，以下 2.1.6 及更早的记录为上游历史，此处保留不做改写。</li>
         <li>1.0.0 本分支独立版本线的起点（对应上游 2.1.6 之后的维护版本），改动：<br/>
-            适配 IntelliJ IDEA 2025.1 ~ 2026.2（build 251 ~ 262.*），构建迁移到 JDK 21 / Gradle 9 / IntelliJ Platform Gradle Plugin 2.13；<br/>
+            支持 IntelliJ IDEA 2022.2 ~ 2026.2（build 222 ~ 262.*），使用 JDK 21 / Gradle 9 / IntelliJ Platform Gradle Plugin 2.13 构建，输出 Java 17 字节码；<br/>
+            2022.3 起使用工具栏筛选与紧凑接口列表（按 build 基线判断，不区分 New UI / Classic UI），2022.2 保留原有布局；<br/>
             恢复并修复 Kotlin Spring 路由解析，兼容新版 Kotlin PSI API；<br/>
             支持一个映射注解声明多个路径时的 URL 生成与逐行复制，并修复 <code>@RequestMapping(params = ...)</code> 条件参数未参与 URL 生成的问题；<br/>
             响应体改为按字节读取并解析 Content-Type 声明的字符集，修复中文乱码，非 JSON 响应内容不再被丢弃；<br/>
             YAML 配置读取支持 <code>---</code> 多文档分段；完善 <code>List</code> 泛型解析并补齐请求体 JSON 组装逻辑；<br/>
             相比上游移除了 JSON→POJO 反向生成、Live Template、Spring Boot 代码生成器等模块，聚焦路由解析与 URL 生成。<br/>
+            Go to Service 输入真实 URL 时可直接命中占位符声明（<code>/Engine/FlowBefore/List/2</code> 匹配 <code>/{category}</code>）；<br/>
+            Go to Service 的模块范围与 HTTP 方法筛选改为搜索框内的两个下拉，按项目记忆；替换掉取不到模块时恒为空的 <code>Only This Module</code> 复选框和从未生效的平台漏斗过滤器；<br/>
+            修复选中结果后跳转时的 EDT 读锁异常；隐藏搜索框右侧的"图钉"按钮（Show All in View，对按 URL 跳接口没有意义）。<br/>
         </li>
         <li>2.1.6 Stability and performance pass:<br/>
                   the Services tree scan now runs on a background read action instead of blocking the EDT;<br/>
@@ -103,7 +107,6 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.zhaow.restful.navigation.action.GotoRequestMappingConfiguration"/>
         <tipAndTrick feature-id="navigation.popup.service" file="GotoService.html"/>
         <toolWindow id="RestfulToolkit"
                     anchor="right"
