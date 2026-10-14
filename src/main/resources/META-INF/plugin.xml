@@ -97,6 +97,11 @@
     <depends>org.jetbrains.plugins.yaml</depends>
     <depends>org.jetbrains.kotlin</depends>
 
+    <!-- Kotlin support uses PSI/light classes and works with both compiler modes. -->
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+    </extensions>
+
     <extensions defaultExtensionNs="com.intellij">
         <projectService serviceImplementation="com.zhaow.restful.navigation.action.GotoRequestMappingConfiguration"/>
         <tipAndTrick feature-id="navigation.popup.service" file="GotoService.html"/>
