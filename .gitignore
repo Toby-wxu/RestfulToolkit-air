@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+.gradle-user-home/
+build/
+out/
+
+# IntelliJ Platform plugin tooling (downloaded IDE distributions, sandbox, logs)
+.intellijPlatform/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local machine config, never portable
+local.properties
+
+# Agent / editor scratch directories
+.claude/
+.junie/
+.qoder/
+
+# OS / logs
+.DS_Store
+Thumbs.db
+*.log

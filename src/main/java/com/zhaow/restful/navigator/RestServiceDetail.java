@@ -1,0 +1,399 @@
+package com.zhaow.restful.navigator;
+
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.editor.colors.FontPreferences;
+import com.intellij.openapi.components.Service;
+import com.intellij.openapi.ide.CopyPasteManager;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.SystemInfo;
+import com.intellij.openapi.util.SystemInfoRt;
+import com.intellij.ui.ColorUtil;
+import com.intellij.ui.components.JBPanel;
+import com.intellij.uiDesigner.core.GridConstraints;
+import com.intellij.uiDesigner.core.GridLayoutManager;
+import com.zhaow.restful.common.RequestHelper;
+import com.zhaow.utils.JsonUtils;
+import com.zhaow.utils.ToolkitUtil;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
+import org.jetbrains.annotations.NotNull;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+//import com.intellij.openapi.editor.colors.impl.AppEditorFontOptions;
+//import com.intellij.ui.components.JBPanelWithEmptyText;
+
+@Service(Service.Level.PROJECT)
+public final class RestServiceDetail extends JBPanel/*WithEmptyText*/{
+    public JTextField urlField;
+    public JPanel urlPanel;
+    public JTextField methodField;
+    public JButton sendButton;
+    public JTabbedPane requestTabbedPane;
+
+    public RSyntaxTextArea requestParamsTextArea;
+    public RSyntaxTextArea requestBodyTextArea;
+    public RSyntaxTextArea responseTextArea;
+
+    public RestServiceDetail(Project project) {
+        super();
+        initComponent();
+    }
+
+    public static RestServiceDetail getInstance(Project p) {
+        return p.getService(RestServiceDetail.class);
+    }
+
+    public void initComponent() {
+        initUI();
+        initActions();
+        initTab();
+    }
+
+    private void initActions() {
+        bindSendButtonActionListener();
+        bindUrlTextActionListener();
+    }
+
+    public void initTab() {
+        String jsonFormat = "Try press 'Ctrl(Cmd) Enter'";
+        RSyntaxTextArea textArea = createTextArea("", SyntaxConstants.SYNTAX_STYLE_JSON);
+        addRequestTabbedPane(jsonFormat, textArea);
+    }
+
+    @Override
+    protected void printComponent(Graphics g) {
+        super.printComponent(g);
+    }
+
+    private void initUI() {
+        urlField.setAutoscrolls(true);
+        urlPanel = new JBPanel();
+        GridLayoutManager mgr = new GridLayoutManager(1, 3);
+        mgr.setHGap(1);
+        mgr.setVGap(1);
+        urlPanel.setLayout(mgr);
+
+        urlPanel.add(methodField,
+                new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_BOTH,
+                        GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED,
+                        null, null, null));
+        urlPanel.add(urlField,
+                new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_BOTH,
+                        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                        null, null, null));
+        urlPanel.add(sendButton,
+                new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_BOTH,
+                        GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED,
+                        null, null, null));
+
+        this.setBorder(BorderFactory.createEmptyBorder());
+        this.setLayout(new GridLayoutManager(2, 1));
+
+        this.add(urlPanel,
+                new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+                        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED,
+                        null, null, null));
+        this.add(requestTabbedPane,
+                new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH,
+                        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                        GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,
+                        null, null, null));
+    }
+
+    private void bindSendButtonActionListener() {
+        sendButton.addActionListener(e -> {
+            // Swing components may only be read here: actionPerformed runs on the EDT.
+            final String requestUrl = buildRequestUrl();
+            final String method = methodField.getText();
+            final String requestBody =
+                    requestBodyTextArea == null ? "" : requestBodyTextArea.getText();
+
+            ProgressManager.getInstance().run(new Task.Backgroundable(null, "Sending Request") {
+                @Override
+                public void run(@NotNull ProgressIndicator indicator) {
+                    indicator.setIndeterminate(true);
+                    final String response;
+                    if (!requestBody.isBlank()) {
+                        response = RequestHelper.postRequestBodyWithJson(requestUrl, requestBody);
+                    } else {
+                        response = RequestHelper.request(requestUrl, method);
+                    }
+                    if (indicator.isCanceled()) {
+                        return;
+                    }
+                    // addResponseTabPanel mutates the JTabbedPane, so it must be back on the EDT.
+                    ApplicationManager.getApplication().invokeLater(
+                            () -> addResponseTabPanel(response == null ? requestUrl : response));
+                }
+            });
+
+        });
+    }
+
+    /**
+     * Substitute {placeholder} path variables and append the remaining params as a query string.
+     */
+    @NotNull
+    private String buildRequestUrl() {
+        String url = urlField.getText();
+        if (requestParamsTextArea == null) {
+            return url;
+        }
+
+        String requestParamsText = requestParamsTextArea.getText();
+        Map<String, String> paramMap = ToolkitUtil.textToParamMap(requestParamsText);
+        for (Map.Entry<String, String> entry : paramMap.entrySet()) {
+            // Both the key (regex) and the value (replacement) come from user text.
+            String pattern = "\\{" + Pattern.quote(entry.getKey()) + "[\\s\\S]*?}";
+            url = url.replaceFirst(pattern, Matcher.quoteReplacement(entry.getValue()));
+        }
+
+        String params = ToolkitUtil.textToRequestParam(requestParamsText);
+        if (!params.isEmpty()) {
+            url += (url.contains("?") ? "&" : "?") + params;
+        }
+        return url;
+    }
+
+    private void bindUrlTextActionListener() {
+        requestTabbedPane.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                super.mousePressed(e);
+                urlField.selectAll();
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                super.mousePressed(e);
+                urlField.selectAll();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                super.mousePressed(e);
+                urlField.selectAll();
+            }
+        });
+
+        methodField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                super.mousePressed(e);
+                methodField.selectAll();
+            }
+        });
+    }
+
+
+    public void addRequestParamsTab(String requestParams) {
+        StringBuilder paramBuilder = new StringBuilder();
+
+        if (requestParams != null && !requestParams.isBlank()) {
+            String[] paramArray = requestParams.split("&");
+            for (String paramPairStr : paramArray) {
+                String[] paramPair = paramPairStr.split("=");
+
+                String param = paramPair[0];
+                String value = paramPairStr.substring(param.length() + 1);
+                paramBuilder.append(param).append(" : ").append(value).append("\n");
+            }
+        }
+
+        if (requestParamsTextArea == null) {
+            requestParamsTextArea = createTextArea(paramBuilder.toString(), SyntaxConstants.SYNTAX_STYLE_NONE);
+        } else {
+            requestParamsTextArea.setText(paramBuilder.toString());
+        }
+
+        addRequestTabbedPane("RequestParams", requestParamsTextArea);
+    }
+
+    public void addRequestBodyTabPanel(String text) {
+        String reqBodyTitle = "RequestBody";
+        if (requestBodyTextArea == null) {
+            requestBodyTextArea = createTextArea(text, SyntaxConstants.SYNTAX_STYLE_JSON);
+        } else {
+            requestBodyTextArea.setText(text);
+        }
+        addRequestTabbedPane(reqBodyTitle, this.requestBodyTextArea);
+    }
+
+
+    public void addRequestTabbedPane(String title, RSyntaxTextArea jTextArea) {
+        // Deriving from this panel's own background follows whatever theme is active;
+        // UIUtil.isUnderDarcula() is deprecated for removal.
+        if (ColorUtil.isDark(getBackground())) {
+            jTextArea.setBackground(new Color(0x2B2B2B));
+            jTextArea.setForeground(new Color(0xBBBBBB));
+
+            jTextArea.setSelectionColor(new Color(0x28437F));
+            jTextArea.setCurrentLineHighlightColor(new Color(0x323232));
+        } else {
+            jTextArea.setBackground(new Color(0xFFFFFF));
+            jTextArea.setForeground(new Color(0x000000));
+            jTextArea.setSelectionColor(new Color(0xA6D2FF));
+            jTextArea.setCurrentLineHighlightColor(new Color(0xFCFAED));
+        }
+
+        RTextScrollPane jbScrollPane = new RTextScrollPane(jTextArea);
+        jTextArea.addKeyListener(new TextAreaKeyAdapter(jTextArea));
+
+        requestTabbedPane.addTab(title, jbScrollPane);
+        requestTabbedPane.setSelectedComponent(jbScrollPane);
+    }
+
+
+    public void addResponseTabPanel(String text) {
+        //FIXME RSyntaxTextArea 中文乱码
+        String responseTabTitle = "Response";
+        if (responseTextArea == null) {
+            responseTextArea = createTextArea(text, SyntaxConstants.SYNTAX_STYLE_JSON);
+            addRequestTabbedPane(responseTabTitle, responseTextArea);
+        } else {
+            Component componentAt = null;
+            responseTextArea.setText(text);
+            int tabCount = requestTabbedPane.getTabCount();
+            for (int i = 0; i < tabCount; i++) {
+                if (requestTabbedPane.getTitleAt(i).equals(responseTabTitle)) {
+                    componentAt = requestTabbedPane.getComponentAt(i);
+                    requestTabbedPane.addTab(responseTabTitle, componentAt);
+                    requestTabbedPane.setSelectedComponent(componentAt);
+                    break;
+                }
+            }
+            if (componentAt == null) {
+                addRequestTabbedPane(responseTabTitle, responseTextArea);
+            }
+        }
+    }
+
+    @NotNull
+    public RSyntaxTextArea createTextArea(String text, String style) {
+        Font font = getTextAreaFont();
+
+        RSyntaxTextArea jTextArea = new RSyntaxTextArea(text);
+        jTextArea.setFont(font);
+        jTextArea.setSyntaxEditingStyle(style);
+        jTextArea.setCodeFoldingEnabled(true);
+
+        jTextArea.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                String text = jTextArea.getText();
+                getEffectiveFont(text);
+            }
+        });
+
+        jTextArea.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() > 1) {
+                    CopyPasteManager.getInstance().setContents(new StringSelection(jTextArea.getText()));
+                }
+            }
+        });
+        return jTextArea;
+    }
+
+    public Font getTextAreaFont() {
+        if (SystemInfoRt.isWindows) {
+            return new Font("宋体", Font.PLAIN, 14);
+        }
+        if (SystemInfoRt.isMac) {
+            return new Font("Menlo", Font.PLAIN, 14);
+        }
+        return new Font("Monospaced", Font.PLAIN, 14);
+    }
+
+    @NotNull
+    private Font getEffectiveFont(String text) {
+        FontPreferences fontPreferences = this.getFontPreferences();
+        List<String> effectiveFontFamilies = fontPreferences.getEffectiveFontFamilies();
+
+        int size = fontPreferences.getSize(fontPreferences.getFontFamily());
+        Font font = new Font(FontPreferences.DEFAULT_FONT_NAME, Font.PLAIN, size);
+        for (String effectiveFontFamily : effectiveFontFamilies) {
+            Font effectiveFont = new Font(effectiveFontFamily, Font.PLAIN, size);
+            if (effectiveFont.canDisplayUpTo(text) == -1) {
+                font = effectiveFont;
+                break;
+            }
+        }
+        return font;
+    }
+
+    @NotNull
+    private final FontPreferences getFontPreferences() {
+        return new FontPreferences();
+    }
+
+    @NotNull
+    private Font getEffectiveFont() {
+        FontPreferences fontPreferences = this.getFontPreferences();
+        String fontFamily = fontPreferences.getFontFamily();
+        int size = fontPreferences.getSize(fontFamily);
+        return new Font(FontPreferences.DEFAULT_FONT_NAME, Font.PLAIN, size);
+    }
+
+
+    public void resetRequestTabbedPane() {
+        this.requestTabbedPane.removeAll();
+        resetTextComponent(requestParamsTextArea);
+        resetTextComponent(requestBodyTextArea);
+        resetTextComponent(responseTextArea);
+    }
+
+    private void resetTextComponent(JTextArea textComponent) {
+        if (textComponent != null && !textComponent.getText().isBlank()) {
+            textComponent.setText("");
+        }
+    }
+
+    public void setMethodValue(String method) {
+        methodField.setText(String.valueOf(method));
+    }
+
+    public void setUrlValue(String url) {
+        urlField.setText(url);
+    }
+
+    private class TextAreaKeyAdapter extends KeyAdapter {
+        private final JTextArea jTextArea;
+
+        public TextAreaKeyAdapter(JTextArea jTextArea) {
+            this.jTextArea = jTextArea;
+        }
+
+        @Override
+        public void keyPressed(KeyEvent event) {
+            super.keyPressed(event);
+            if ((event.getKeyCode() == KeyEvent.VK_ENTER)
+                    && (event.isControlDown() || event.isMetaDown())) {
+                String oldValue = jTextArea.getText();
+                if (!JsonUtils.isValidJson(oldValue)) {
+                    return;
+                }
+                jTextArea.setText(JsonUtils.format(oldValue));
+            }
+        }
+    }
+
+
+}
