@@ -33,6 +33,15 @@ class AntPathMatcherTest {
     }
 
     /**
+     * Regression for the reported "/Engine/FlowBefore/List/2 finds nothing" case: the matcher was
+     * fine, the popup was discarding its result in a second pass.
+     */
+    @Test
+    void matchesDeepPathVariableAgainstConcreteSegment() {
+        assertTrue(matcher.match("/Engine/FlowBefore/List/{category}", "/Engine/FlowBefore/List/2"));
+    }
+
+    /**
      * The vendored copy exposes doMatch rather than extractPathWithinPattern; the popup only
      * needs match(), but capturing the placeholder proves the pattern is parsed correctly.
      */

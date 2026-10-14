@@ -2,16 +2,17 @@ package com.zhaow.restful.navigation.action;
 
 import com.intellij.featureStatistics.FeatureUsageTracker;
 import com.intellij.ide.actions.GotoActionBase;
+import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.ide.util.gotoByName.ChooseByNameFilter;
 import com.intellij.ide.util.gotoByName.ChooseByNameItemProvider;
 import com.intellij.ide.util.gotoByName.ChooseByNameModel;
 import com.intellij.ide.util.gotoByName.ChooseByNamePopup;
-import com.intellij.navigation.ChooseByNameContributor;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
-import com.intellij.openapi.actionSystem.DataKeys;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
 import com.intellij.openapi.ide.CopyPasteManager;
+import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
@@ -21,12 +22,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import java.awt.Dimension;
 import java.awt.datatransfer.DataFlavor;
 import java.util.Arrays;
 import java.util.List;
 
 
 public class GotoRequestMappingAction extends GotoActionBase implements DumbAware {
+    private static final String ALL_MODULES = "All Modules";
+    private static final String MODULE_SCOPE_KEY = "GoToRestService.ModuleScope";
+
     public GotoRequestMappingAction() {
     }
 
@@ -38,12 +43,10 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
 
         FeatureUsageTracker.getInstance().triggerFeatureUsed("navigation.popup.service");
 
-        ChooseByNameContributor[] chooseByNameContributors = {
-                new GotoRequestMappingContributor(e.getData(DataKeys.MODULE))/*,
-                new RequestMappingContributor()*/
-        };
+        GotoRequestMappingContributor contributor = new GotoRequestMappingContributor();
+        restorePersistedScope(project, contributor);
 
-        final GotoRequestMappingModel model = new GotoRequestMappingModel(project, chooseByNameContributors);
+        final GotoRequestMappingModel model = new GotoRequestMappingModel(project, contributor);
 
 //        GotoRequestMappingCallback callback = new GotoRequestMappingCallback();
 
@@ -92,10 +95,68 @@ public class GotoRequestMappingAction extends GotoActionBase implements DumbAwar
 
         String predefinedText = start.first == null ? copiedURL : start.first;
 
-        showNavigationPopup(callback, findUsagesTitle,
-                RestServiceChooseByNamePopup.createPopup(project, model, itemProvider, predefinedText,
-                        mayRequestOpenInCurrentWindow,
-                        start.second), allowMultipleSelection);
+        RestServiceChooseByNamePopup popup = RestServiceChooseByNamePopup.createPopup(project, model, itemProvider,
+                predefinedText, mayRequestOpenInCurrentWindow, start.second);
+        // Not ChooseByNameBase#setToolArea: ChooseByNameFilter claims that slot in its own
+        // constructor, and the slot accepts a single component before invoke().
+        popup.setModuleSelector(createModuleSelector(popup, ((GotoRequestMappingModel) model).getContributor(), project));
+
+        showNavigationPopup(callback, findUsagesTitle, popup, allowMultipleSelection);
+    }
+
+    /**
+     * Module drop-down for the popup's tool row. Index 0 means "search the whole project"; the
+     * choice is remembered per project so a scoped search survives reopening the popup.
+     */
+    @Nullable
+    private static JComponent createModuleSelector(ChooseByNamePopup popup,
+                                                   GotoRequestMappingContributor contributor,
+                                                   @NotNull Project project) {
+        List<Module> modules = Arrays.asList(ModuleManager.getInstance(project).getModules());
+        if (modules.size() < 2) {
+            return null;
+        }
+
+        String[] labels = new String[modules.size() + 1];
+        labels[0] = ALL_MODULES;
+        for (int i = 0; i < modules.size(); i++) {
+            labels[i + 1] = modules.get(i).getName();
+        }
+
+        JComboBox<String> selector = new JComboBox<>(labels);
+        Module scope = contributor.getScope();
+        int initial = scope == null ? 0 : modules.indexOf(scope) + 1;
+        selector.setSelectedIndex(Math.max(initial, 0));
+        selector.setToolTipText("Limit the search to one module");
+
+        Dimension preferred = selector.getPreferredSize();
+        Dimension size = new Dimension(Math.min(preferred.width, 180), preferred.height);
+        selector.setPreferredSize(size);
+        selector.setMaximumSize(size);
+
+        selector.addActionListener(event -> {
+            int index = selector.getSelectedIndex();
+            Module selected = index <= 0 ? null : modules.get(index - 1);
+            contributor.setScope(selected);
+            PropertiesComponent.getInstance(project)
+                    .setValue(MODULE_SCOPE_KEY, selected == null ? null : selected.getName());
+            popup.rebuildList(false);
+        });
+
+        return selector;
+    }
+
+    private static void restorePersistedScope(@NotNull Project project, GotoRequestMappingContributor contributor) {
+        String name = PropertiesComponent.getInstance(project).getValue(MODULE_SCOPE_KEY);
+        if (name == null) {
+            return;
+        }
+        for (Module module : ModuleManager.getInstance(project).getModules()) {
+            if (module.getName().equals(name)) {
+                contributor.setScope(module);
+                return;
+            }
+        }
     }
 
     private String tryFindCopiedURL() {

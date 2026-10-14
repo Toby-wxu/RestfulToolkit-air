@@ -25,11 +25,48 @@ import com.zhaow.utils.ToolkitUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Container;
+
 public class RestServiceChooseByNamePopup extends ChooseByNamePopup {
   public static final Key<RestServiceChooseByNamePopup> CHOOSE_BY_NAME_POPUP_IN_PROJECT_KEY = new Key<>("ChooseByNamePopup");
 
   protected RestServiceChooseByNamePopup(@Nullable Project project, @NotNull ChooseByNameModel model, @NotNull ChooseByNameItemProvider provider, @Nullable ChooseByNamePopup oldPopup, @Nullable String predefinedText, boolean mayRequestOpenInCurrentWindow, int initialIndex) {
     super(project, model, provider, oldPopup, predefinedText, mayRequestOpenInCurrentWindow, initialIndex);
+  }
+
+  private JComponent myModuleSelector;
+
+  /**
+   * The module drop-down for the caption row. {@code ChooseByNameBase#setToolArea} cannot be used:
+   * {@code ChooseByNameFilter} claims that single slot from its own constructor.
+   */
+  public void setModuleSelector(@Nullable JComponent selector) {
+    this.myModuleSelector = selector;
+  }
+
+  @Override
+  protected void showTextFieldPanel() {
+    insertIntoToolsRow(myModuleSelector);
+    super.showTextFieldPanel();
+  }
+
+  private void insertIntoToolsRow(@Nullable JComponent selector) {
+    if (selector == null || selector.getParent() != null) {
+      return;
+    }
+    Container textPanel = getTextField().getParent();
+    if (textPanel.getComponentCount() == 0 || !(textPanel.getComponent(0) instanceof JPanel caption)) {
+      return;
+    }
+    if (!(caption.getLayout() instanceof BorderLayout layout)) {
+      return;
+    }
+    if (layout.getLayoutComponent(BorderLayout.EAST) instanceof JComponent tools) {
+      tools.add(selector, 0);
+    }
   }
 
   public static RestServiceChooseByNamePopup createPopup(final Project project,

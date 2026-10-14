@@ -1,14 +1,12 @@
 package com.zhaow.restful.navigation.action;
 
 import com.intellij.ide.IdeBundle;
-import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.ide.util.gotoByName.CustomMatcherModel;
 import com.intellij.ide.util.gotoByName.FilteringGotoByModel;
 import com.intellij.navigation.ChooseByNameContributor;
 import com.intellij.navigation.NavigationItem;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.SystemInfo;
 import com.intellij.psi.codeStyle.MinusculeMatcher;
 import com.intellij.psi.codeStyle.NameUtil;
 import com.zhaow.restful.common.spring.AntPathMatcher;
@@ -24,8 +22,17 @@ import java.util.Collection;
  */
 public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> implements DumbAware, CustomMatcherModel {
 
-    protected GotoRequestMappingModel(@NotNull Project project, @NotNull ChooseByNameContributor[] contributors) {
-        super(project, contributors);
+    private final GotoRequestMappingContributor myContributor;
+
+    protected GotoRequestMappingModel(@NotNull Project project, @NotNull GotoRequestMappingContributor contributor) {
+        super(project, new ChooseByNameContributor[]{contributor});
+        this.myContributor = contributor;
+    }
+
+    /** The popup's module drop-down writes its selection through this contributor. */
+    @NotNull
+    public GotoRequestMappingContributor getContributor() {
+        return myContributor;
     }
 // 设置过滤项
 /*    @Override
@@ -33,14 +40,11 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
         super.setFilterItems(filterItems);
     }*/
 
-    // TODO: 过滤模块？ FilteringGotoByModel.acceptItem 调用，结合 重写 setFilterItems或 getFilterItems() 实现，可过滤模块 或者 method (如GotoClassModel2过滤language，重写 getFilterItems())
     @Nullable
     @Override
     protected HttpMethod filterValueFor(NavigationItem item) {
         if (item instanceof RestServiceItem) {
-//            if (((RestServiceItem) item).getModule().getName().contains("eureka")) {
-                return ((RestServiceItem) item).getMethod();
-//            }
+            return ((RestServiceItem) item).getMethod();
         }
 
         return null;
@@ -82,26 +86,6 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
 //        return "Service path not found";
     }
 
-    @Override
-    public char getCheckBoxMnemonic() {
-        return SystemInfo.isMac?'P':'n';
-    }
-
-    @Override
-    public boolean loadInitialCheckBoxState() {
-        PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(myProject);
-        return propertiesComponent.isTrueValue("GoToRestService.OnlyCurrentModule");
-    }
-
-    /* 选择 item 跳转触发 */
-    @Override
-    public void saveInitialCheckBoxState(boolean state) {
-        PropertiesComponent propertiesComponent = PropertiesComponent.getInstance(myProject);
-        if (propertiesComponent.isTrueValue("GoToRestService.OnlyCurrentModule")) {
-            propertiesComponent.setValue("GoToRestService.OnlyCurrentModule", Boolean.toString(state));
-        }
-    }
-
     @Nullable
     @Override
     public String getFullName(Object element) {
@@ -116,13 +100,26 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
         return new String[]{"/","?"};
     }
 
-
-    /** return null to hide checkbox panel */
+    /**
+     * Returning null hides the check box: module scoping is the drop-down in the popup now.
+     */
     @Nullable
     @Override
     public String getCheckBoxName() {
-        return "Only This Module";
-//        return null;
+        return null;
+    }
+
+    /**
+     * Abstract on ChooseByNameModel even though no check box is shown, so they stay as no-ops;
+     * the old "GoToRestService.OnlyCurrentModule" value is no longer read or written.
+     */
+    @Override
+    public boolean loadInitialCheckBoxState() {
+        return false;
+    }
+
+    @Override
+    public void saveInitialCheckBoxState(boolean state) {
     }
 
 
