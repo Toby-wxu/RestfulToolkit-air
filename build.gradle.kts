@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.fengjianliang.restful.toolkit"
-version = "2.1.7"
+version = "1.0.0"
 
 java {
     // Resolved from the local JDK or a downloaded one; never hardcode org.gradle.java.home,
@@ -51,7 +51,7 @@ intellijPlatform {
 
         ideaVersion {
             sinceBuild = "251"
-            untilBuild = "261.*"
+            untilBuild = "262.*"
         }
     }
 }

@@ -1,13 +1,14 @@
 # RestfulToolkit-air
 
 > 一套 IntelliJ IDEA 的 RESTful 服务开发辅助工具集 —— RestfulToolkit 的维护分支，
-> 已适配 IntelliJ IDEA 2025.1 ~ 2026.1，并修复了原版在新版本 IDE 上的不兼容与崩溃问题。
+> 支持 IntelliJ IDEA 2025.1 ~ 2026.2，并修复了原版在新版本 IDE 上的不兼容与崩溃问题。
 
 原项目：[mrmanzhaow/RestfulToolkit](https://github.com/mrmanzhaow/RestfulToolkit)
 
 ## 目录
 
 - [兼容性](#兼容性)
+  - [版本号规则](#版本号规则)
 - [安装](#安装)
 - [功能一览](#功能一览)
 - [详细功能](#详细功能)
@@ -28,13 +29,26 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| IDE | IntelliJ IDEA 2025.1 (build 251) ~ 2026.1 (build 261.\*)，Ultimate / Community 均可 |
+| IDE | IntelliJ IDEA 2025.1 (build 251) ~ 2026.2 (build 262.\*)，Ultimate / Community 均可 |
 | JDK | 构建与运行需 **JDK 21**（由 `gradle/gradle-daemon-jvm.properties` 按版本锁定，不绑定本机路径） |
 | Gradle | Wrapper 9.0.0 |
 | 插件平台 | JetBrains IntelliJ Platform Gradle Plugin 2.13.0 |
 | 依赖插件 | Java、Kotlin、Properties、YAML（IDEA 内置，无需额外安装） |
 
-插件 ID `com.fengjianliang.restful.toolkit`，版本 `2.1.7`。Java 源码包名沿用上游的 `com.zhaow.*`。
+插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.0`。Java 源码包名沿用上游的 `com.zhaow.*`。
+
+### 版本号规则
+
+本插件自 `1.0.0` 起使用**独立版本线**，不再跟随上游的 2.x 编号，按语义化版本递增：
+
+| 位 | 何时递增 |
+| --- | --- |
+| 主版本（`1.x.x`） | 不兼容变更：适配新的 IDE 平台大版本线、移除或重做现有功能 |
+| 次版本（`x.1.x`） | 向后兼容的新功能：新的注解识别、新的生成动作 |
+| 修订号（`x.x.1`） | 向后兼容的问题修复 |
+
+`1.0.0` 对应上游 RestfulToolkit `2.1.6`（及其修复分支）之后的维护版本；`plugin.xml` 的 `<change-notes>`
+保留了上游 1.0.3 ~ 2.1.6 的完整原始记录，本分支的改动从 1.0.0 起单独记账。
 
 ## 安装
 
@@ -46,7 +60,7 @@
 **方式二：本地构建后安装**
 
 ```bash
-./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-2.1.7.zip
+./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-1.0.0.zip
 ```
 
 然后 `Settings ▸ Plugins ▸ ⚙ ▸ Install Plugin from Disk...` 选择该 zip。
@@ -185,7 +199,7 @@ public class ProductController {
 
 ## 与上游的差异
 
-- 迁移到 IntelliJ Platform Gradle Plugin 2.x + Gradle 9 + JDK 21，适配 IDEA 2025.1/2026.1 的新 API，原版在新 IDE 上的不兼容报错已消除。
+- 迁移到 IntelliJ Platform Gradle Plugin 2.x + Gradle 9 + JDK 21，适配 IDEA 2025.1 ~ 2026.2 的新 API，原版在新 IDE 上的不兼容报错已消除。
 - 组件注册改为 `@Service` 注解与 `projectService`，替换已弃用的 `project-components` / `application-components`。
 - 服务树扫描从 EDT 移到后台 ReadAction；修复 Spring / Kotlin 解析过程中的 `ClassCastException`、`IndexOutOfBoundsException`、NPE。
 - 补齐并修复 Kotlin Spring 路由解析，兼容新版 Kotlin PSI API。
@@ -250,4 +264,4 @@ src/main/resources/META-INF/plugin.xml   # 扩展点、动作与快捷键注册
 
 源码 Java 包名沿用上游的 `com.zhaow.*`，未做重命名（重命名会破坏与上游的对照，也与上述署名无关）。
 `plugin.xml` 中的 `<vendor>` 已改为本项目维护者信息，因为 Marketplace 的发布者必须与实际上传账号一致；
-上游的 `<change-notes>` 版本历史（1.0.3 ~ 2.1.6）完整保留，本分支的改动单独记为 2.1.7。
+上游的 `<change-notes>` 版本历史（1.0.3 ~ 2.1.6）完整保留，本分支的改动单独记为 1.0.0（独立版本线，见「版本号规则」）。

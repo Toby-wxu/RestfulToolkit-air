@@ -29,13 +29,13 @@
     <li>Java / Kotlin 实体类转 JSON、压缩 JSON、批量字段值；<em>Ctrl/Cmd + Enter</em> 格式化 JSON。</li>
   </ul>
   <p>支持 Spring 体系（Spring MVC / Spring Boot）与 JAX-RS，支持 Java 和 Kotlin 语言。</p>
-  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，适配 IntelliJ IDEA 2025.1 ~ 2026.1。</p>
+  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，支持 IntelliJ IDEA 2025.1 ~ 2026.2。</p>
     ]]></description>
 
     <change-notes><![CDATA[
         <li>本分支继承自上游 RestfulToolkit（作者 mrmanzhaow）及其修复版 RestfulToolkit-fix，以下 2.1.6 及更早的记录为上游历史，此处保留不做改写。</li>
-        <li>2.1.7 本分支的改动：<br/>
-            适配 IntelliJ IDEA 2025.1 ~ 2026.1（build 251 ~ 261.*），构建迁移到 JDK 21 / Gradle 9 / IntelliJ Platform Gradle Plugin 2.13；<br/>
+        <li>1.0.0 本分支独立版本线的起点（对应上游 2.1.6 之后的维护版本），改动：<br/>
+            适配 IntelliJ IDEA 2025.1 ~ 2026.2（build 251 ~ 262.*），构建迁移到 JDK 21 / Gradle 9 / IntelliJ Platform Gradle Plugin 2.13；<br/>
             恢复并修复 Kotlin Spring 路由解析，兼容新版 Kotlin PSI API；<br/>
             支持一个映射注解声明多个路径时的 URL 生成与逐行复制，并修复 <code>@RequestMapping(params = ...)</code> 条件参数未参与 URL 生成的问题；<br/>
             响应体改为按字节读取并解析 Content-Type 声明的字符集，修复中文乱码，非 JSON 响应内容不再被丢弃；<br/>
