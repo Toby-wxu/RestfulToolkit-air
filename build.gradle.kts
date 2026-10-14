@@ -50,14 +50,30 @@ intellijPlatform {
         version = project.version.toString()
 
         ideaVersion {
-            sinceBuild = "251"
+            sinceBuild = "222"
             untilBuild = "262.*"
+        }
+    }
+
+    pluginVerification {
+        ides {
+            // Local paths can be supplied for offline verification; never commit machine paths.
+            val compatibilityIdes = providers.gradleProperty("compatibilityIdePaths").orNull
+            if (compatibilityIdes != null) {
+                compatibilityIdes.split(';').filter { it.isNotBlank() }.forEach { local(it) }
+            } else {
+                // IGP's IDE resolver requires 223+; verify 222 with the standalone CLI (README).
+                create("IC", "2022.3.3")
+                create("IU", "2025.1")
+            }
         }
     }
 }
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+    // Gradle/the compilation SDK use Java 21; IDEA 2022.2 runs on Java 17.
+    options.release = 17
 }
 
 tasks.withType<Test> {
