@@ -156,6 +156,9 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
     private MinusculeMatcher matcherFor(String pattern) {
         if (!pattern.equals(cachedPattern)) {
             cachedPattern = pattern;
+            // MatchingCaseSensitivity is scheduled for removal, but its replacement
+            // com.intellij.util.text.matching.MatchingMode (buildMatcher(String, MatchingMode.IGNORE_CASE))
+            // only exists from 2026.x, while this plugin is loadable from build 222. Switch once sinceBuild moves up.
             cachedMatcher = NameUtil.buildMatcher("*" + pattern, NameUtil.MatchingCaseSensitivity.NONE);
         }
         return cachedMatcher;
