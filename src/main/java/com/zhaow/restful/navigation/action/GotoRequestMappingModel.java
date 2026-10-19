@@ -1,6 +1,5 @@
 package com.zhaow.restful.navigation.action;
 
-import com.intellij.ide.IdeBundle;
 import com.intellij.ide.util.gotoByName.CustomMatcherModel;
 import com.intellij.ide.util.gotoByName.FilteringGotoByModel;
 import com.intellij.navigation.ChooseByNameContributor;
@@ -11,6 +10,7 @@ import com.intellij.psi.codeStyle.MinusculeMatcher;
 import com.intellij.psi.codeStyle.NameUtil;
 import com.zhaow.restful.common.spring.AntPathMatcher;
 import com.zhaow.restful.method.HttpMethod;
+import com.zhaow.utils.RestfulToolkitBundle;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,16 +74,19 @@ public class GotoRequestMappingModel extends FilteringGotoByModel<HttpMethod> im
         return myToolbarUi ? "RESTful Toolkit" : "Enter service URL path :";
     }
 
+    /**
+     * Own wording: {@code IdeBundle} became {@code @ApiStatus.Internal} in 2026.2, and the platform
+     * key used here is itself deprecated. {@code RestfulToolkitBundle_zh_CN} keeps the Chinese text
+     * that the language pack used to supply.
+     */
     @Override
     public String getNotInMessage() {
-       return IdeBundle.message("label.no.matches.found.in.project");
-//        return "No matched method found";
+        return RestfulToolkitBundle.message("toolkit.goto.no.matches.in.project");
     }
 
     @Override
     public String getNotFoundMessage() {
-       return IdeBundle.message("label.no.matches.found");
-//        return "Service path not found";
+        return RestfulToolkitBundle.message("toolkit.goto.no.matches");
     }
 
     @Nullable
