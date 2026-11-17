@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.fengjianliang.restful.toolkit"
-version = "1.0.0"
+version = "1.0.1"
 
 java {
     // Resolved from the local JDK or a downloaded one; never hardcode org.gradle.java.home,
@@ -45,13 +45,19 @@ dependencies {
 }
 
 intellijPlatform {
+    publishing {
+        // Put the Marketplace permanent token in ~/.gradle/gradle.properties as
+        // intellijPlatformPublishingToken=... ; never commit it to the repository.
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+    }
+
     pluginConfiguration {
         name = "RestfulToolkit-air"
         version = project.version.toString()
 
         ideaVersion {
             sinceBuild = "222"
-            untilBuild = "262.*"
+            untilBuild = "263.*"
         }
     }
 

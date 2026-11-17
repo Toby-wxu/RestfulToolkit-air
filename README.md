@@ -1,7 +1,7 @@
 # RestfulToolkit-air
 
 > 一套 IntelliJ IDEA 的 RESTful 服务开发辅助工具集 —— RestfulToolkit 的维护分支，
-> 支持 IntelliJ IDEA 2022.2 ~ 2026.2，搜索窗口从 2022.3 起使用工具栏筛选与紧凑接口列表。
+> 支持 IntelliJ IDEA 2022.2 ~ 2026.3，搜索窗口从 2022.3 起使用工具栏筛选与紧凑接口列表。
 
 原项目：[mrmanzhaow/RestfulToolkit](https://github.com/mrmanzhaow/RestfulToolkit)
 
@@ -29,13 +29,13 @@
 
 | 项目 | 要求 |
 | --- | --- |
-| IDE | IntelliJ IDEA 2022.2 (build 222) ~ 2026.2 (build 262.\*)，Ultimate / Community 均可 |
+| IDE | IntelliJ IDEA 2022.2 (build 222) ~ 2026.3 (build 263.\*)，Ultimate / Community 均可 |
 | JDK | 构建使用 **JDK 21**；插件字节码为 **Java 17**，运行使用对应 IDEA 自带的 JBR（2022.2 起为 17，2024.2 起为 21） |
 | Gradle | Wrapper 9.0.0 |
 | 插件平台 | JetBrains IntelliJ Platform Gradle Plugin 2.13.0 |
 | 依赖插件 | Java、Kotlin、Properties、YAML（IDEA 内置，无需额外安装） |
 
-插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.0`。Java 源码包名沿用上游的 `com.zhaow.*`。
+插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.1`。Java 源码包名沿用上游的 `com.zhaow.*`。
 
 搜索窗口使用以下规则，**安装范围和界面切换是两项独立判断**：
 
@@ -43,7 +43,7 @@
 | --- | --- |
 | 2022.2（222） | 原有布局，保留输入提示、模块和 HTTP 方法下拉 |
 | 2022.3（223）及以上 | 顶部工具栏筛选、完整宽度搜索框、HTTP 方法文字标识、URL / Controller 分列、底部源码位置 |
-| 2022.2 之前 / 2026.2 之后 | 不在此版本插件的安装范围内 |
+| 2022.2 之前 / 2026.3 之后 | 不在此版本插件的安装范围内 |
 
 判断只看 build 基线，不看 New UI / Classic UI：平台里回答"当前是不是 New UI"的
 `ExperimentalUI` 是 `@ApiStatus.Internal`，插件校验器会直接报"Internal API is used"，而 SDK 里没有公开的替代
@@ -61,20 +61,20 @@
 | 次版本（`x.1.x`） | 向后兼容的新功能：新的注解识别、新的生成动作 |
 | 修订号（`x.x.1`） | 向后兼容的问题修复 |
 
-`1.0.0` 对应上游 RestfulToolkit `2.1.6`（及其修复分支）之后的维护版本；`plugin.xml` 的 `<change-notes>`
-保留了上游 1.0.3 ~ 2.1.6 的完整原始记录，本分支的改动从 1.0.0 起单独记账。
+`1.0.0` 对应上游 RestfulToolkit `2.1.6`（及其修复分支）之后的维护版本；本分支的改动从 1.0.0 起单独记账。
+市场页面的更新说明只保留精简条目，上游 1.0.3 ~ 2.1.6 的完整原始记录存档在本 README 末尾「上游版本历史」。
 
 ## 安装
 
 **方式一：插件市场**
 
 `Settings/Preferences ▸ Plugins ▸ Marketplace` 搜索 **RestfulToolkit-air**，安装后重启 IDE。
-（市场页面地址待上架后补充）
+市场页面：https://plugins.jetbrains.com/plugin/35100-restfultoolkit-air
 
 **方式二：本地构建后安装**
 
 ```bash
-./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-1.0.0.zip
+./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-1.0.1.zip
 ```
 
 然后 `Settings ▸ Plugins ▸ ⚙ ▸ Install Plugin from Disk...` 选择该 zip。
@@ -89,7 +89,7 @@
 
 | 功能 | 入口 | 快捷键 |
 | --- | --- | --- |
-| 按 URL 跳转到方法定义 | `Navigate ▸ Go to ▸ Service` | `Ctrl + \` 或 `Ctrl + Alt + N` |
+| 按 URL 跳转到方法定义 | `Navigate ▸ Go to ▸ Service` | `Ctrl + \`、`Ctrl + .` 或 `Ctrl + Alt + N` |
 | Services Tree 工具窗口 | 右侧工具窗口条 `RestfulToolkit` | — |
 | RESTful 动作快捷面板 | `Edit ▸ Popup RESTful Toolkit ...` | `Alt + Shift + R` |
 | 复制完整 URL / 相对 URL / 请求体 JSON / 查询参数 | 编辑器右键 ▸ `RestfulToolkit` 子菜单 | — |
@@ -100,7 +100,7 @@
 
 ### 1. 按 URL 导航到方法定义（Go to Service）
 
-按 `Ctrl + \`（或 `Ctrl + Alt + N`）打开搜索框，输入 URL 即可直达对应的 Controller 方法。
+按 `Ctrl + \`（或 `Ctrl + .`、`Ctrl + Alt + N`）打开搜索框，输入 URL 即可直达对应的 Controller 方法。
 
 - **剪贴板自动填充**：编辑器内无选区时，若剪贴板内容以 `http` 开头，会自动截取路径部分填入搜索框（最长 120 字符）。
 - **自动清洗输入**：粘贴完整地址时会自动去掉协议、host、端口和 `?` 之后的查询串，只保留路径参与匹配。
@@ -259,10 +259,10 @@ src/test/java/com/zhaow/utils/ToolkitUtilTest
 2022.2 的二进制兼容检查使用 [JetBrains 官方独立 Plugin Verifier](https://github.com/JetBrains/intellij-plugin-verifier)，下载其 `verifier-cli-<version>-all.jar` 并解压 IDEA 2022.2.5 后运行：
 
 ```bash
-java -jar <verifier-all.jar> check-plugin build/distributions/RestfulToolkit-air-1.0.0.zip <IDEA-2022.2.5目录> -verification-reports-dir build/reports/legacyPluginVerifier
+java -jar <verifier-all.jar> check-plugin build/distributions/RestfulToolkit-air-1.0.1.zip <IDEA-2022.2.5目录> -verification-reports-dir build/reports/legacyPluginVerifier
 ```
 
-版本范围包含的其他 IDEA 版本仍建议在发布前补充验证，尤其是 2026.2。
+版本范围包含的其他 IDEA 版本仍建议在发布前补充验证，尤其是 2026.3。
 
 本次验证：2022.2.5、2022.3.3、2025.1 的 Plugin Verifier 均未发现二进制兼容错误；仍有资源键弃用、弃用 API 和 `ExperimentalUI` 内部 API 使用提示。源码已通过 2022.2.5 SDK 编译，常规构建与 28 项单元测试通过。界面交互仍需按下列清单在 IDE 中回归。
 
@@ -302,4 +302,37 @@ src/main/resources/META-INF/plugin.xml   # 扩展点、动作与快捷键注册
 
 源码 Java 包名沿用上游的 `com.zhaow.*`，未做重命名（重命名会破坏与上游的对照，也与上述署名无关）。
 `plugin.xml` 中的 `<vendor>` 已改为本项目维护者信息，因为 Marketplace 的发布者必须与实际上传账号一致；
-上游的 `<change-notes>` 版本历史（1.0.3 ~ 2.1.6）完整保留，本分支的改动单独记为 1.0.0（独立版本线，见「版本号规则」）。
+上游的 `<change-notes>` 版本历史（1.0.3 ~ 2.1.6）原文存档在下方「上游版本历史」，市场页面的更新说明精简为本分支条目加署名链接；本分支的改动从 1.0.0 起单独记账（独立版本线，见「版本号规则」）。
+
+## 上游版本历史（原文保留）
+
+以下为上游 RestfulToolkit（作者 mrmanzhaow）及 RestfulToolkit-fix 的原始更新记录（1.0.3 ~ 2.1.6），原文保留不做改写：
+
+- 2.1.6 Stability and performance pass:
+  the Services tree scan now runs on a background read action instead of blocking the EDT;
+  fixed ClassCastException / IndexOutOfBoundsException / NPE crashes in the Spring and Kotlin resolvers;
+  HTTP requests now have connect and read timeouts;
+  "Convert to JSON" no longer degrades after a self-referential class is converted;
+  server.port / context-path lookup now reads application.yaml and falls through profiles correctly.
+- 2.0.8 修复2022.3版本报错问题；黑色主题下请求参数的面板也改为黑色
+- 2.0.7 Bug fixed
+- 2.0.6 Bug fixed, add Copy Query Param (Key Value)
+- 2.0.5 Bug fixed, supported http request OPTIONS,TRACE,CONNECT methods.
+- 2.0.4 Fixed NullPointerException with Kotlin project.
+  Fixed IllegalArgumentException: No enum constant com.zhaow.restful.method.HttpMethod.HEAD
+  Supported Kotlin 1.2 level.
+- 2.0.3 Improvements in navigate service(url), auto pasted copied http url to from clipboard. Bug fixed.
+- 2.0.2 Match mapped URLs for Controllers without @RequestMapping annotations;
+  Supported mapped URLs for Controllers extended supper Object with @RequestMapping annotations.
+  Added Popup Menus ( "Copy Full Url", "Jump to Source") for service nodes.
+- 2.0.1 Fixed JSON generation issue with POJO contains array fields;
+- 2.0 Add Kotlin language supported; Fixed some bugs.
+- 1.1 Supported JAX-RS; Format JSON data , use "Command + Enter" on Mac
+  (增强 POJO 生成 json 功能,处理 List、Enum等类型，处理自关联场景); Fixed some bugs.
+- 1.0.9 Service url navigation: matched restful style request mappings (e.g.:"/product/{productId}");
+- 1.0.8 Bug fixed
+- 1.0.7 Match more mapped URLs ; (识别更多映射) Replaced icons; Add "Convert to JSON (Compressed)" function to java class;
+- 1.0.6 Compatible with IDEA 2016 (兼容 IDEA 2016)
+- 1.0.5 修复发送请求IDE卡死的问题.
+- 1.0.4 Format Date type (格式化 Date 类型)
+- 1.0.3 Small cleanup some code.

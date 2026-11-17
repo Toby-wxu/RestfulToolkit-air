@@ -6,7 +6,7 @@
     <description><![CDATA[
   <h3>A toolkit for RESTful services development.</h3>
   <ul>
-    <li>Jump to the handler method behind a URL (<em>Ctrl + \</em> or <em>Ctrl + Alt + N</em>),
+    <li>Jump to the handler method behind a URL (<em>Ctrl + \</em>, <em>Ctrl + .</em> or <em>Ctrl + Alt + N</em>),
         with Ant-style matching so <code>/product/{id}</code> resolves <code>/product/42</code>.</li>
     <li>RESTful services tree tool window, scanned on a background thread instead of blocking the UI.</li>
     <li>Built-in HTTP request client: responses are decoded with the charset reported by the server,
@@ -17,11 +17,14 @@
         format JSON with <em>Ctrl/Cmd + Enter</em>.</li>
   </ul>
   <p>Supports Spring MVC / Spring Boot and JAX-RS, in both Java and Kotlin.</p>
+  <p>Maintenance fork of <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a> (original author mrmanzhaow),
+     under the same Apache-2.0 license. Supports IntelliJ IDEA 2022.2 ~ 2026.3;
+     the search popup uses a toolbar-filter layout since 2022.3.</p>
 
   <hr />
   <h3>一套 RESTful 服务开发辅助工具集。</h3>
   <ul>
-    <li>按 URL 直达接口方法（<em>Ctrl \</em> 或 <em>Ctrl Alt N</em>），支持 Ant 风格路径匹配，
+    <li>按 URL 直达接口方法（<em>Ctrl \</em>、<em>Ctrl .</em> 或 <em>Ctrl Alt N</em>），支持 Ant 风格路径匹配，
         <code>/product/{productId}</code> 可命中 <code>/product/42</code>。</li>
     <li>Services Tree 工具窗口，接口扫描在后台线程完成，不阻塞界面。</li>
     <li>内置 HTTP 请求工具：按服务端声明的字符集解码，修复中文乱码，非 JSON 响应原样保留。</li>
@@ -29,64 +32,13 @@
     <li>Java / Kotlin 实体类转 JSON、压缩 JSON、批量字段值；<em>Ctrl/Cmd + Enter</em> 格式化 JSON。</li>
   </ul>
   <p>支持 Spring 体系（Spring MVC / Spring Boot）与 JAX-RS，支持 Java 和 Kotlin 语言。</p>
-  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，支持 IntelliJ IDEA 2022.2 ~ 2026.2，搜索窗口自 2022.3 起使用工具栏筛选布局。</p>
+  <p>本插件是 <a href="https://github.com/mrmanzhaow/RestfulToolkit">RestfulToolkit</a>（原作者 mrmanzhaow）的维护分支，沿用其 Apache-2.0 授权，支持 IntelliJ IDEA 2022.2 ~ 2026.3，搜索窗口自 2022.3 起使用工具栏筛选布局。</p>
     ]]></description>
 
     <change-notes><![CDATA[
-        <li>本分支继承自上游 RestfulToolkit（作者 mrmanzhaow）及其修复版 RestfulToolkit-fix，以下 2.1.6 及更早的记录为上游历史，此处保留不做改写。</li>
-        <li>1.0.0 本分支独立版本线的起点（对应上游 2.1.6 之后的维护版本），改动：<br/>
-            支持 IntelliJ IDEA 2022.2 ~ 2026.2（build 222 ~ 262.*），使用 JDK 21 / Gradle 9 / IntelliJ Platform Gradle Plugin 2.13 构建，输出 Java 17 字节码；<br/>
-            2022.3 起使用工具栏筛选与紧凑接口列表（按 build 基线判断，不区分 New UI / Classic UI），2022.2 保留原有布局；<br/>
-            恢复并修复 Kotlin Spring 路由解析，兼容新版 Kotlin PSI API；<br/>
-            支持一个映射注解声明多个路径时的 URL 生成与逐行复制，并修复 <code>@RequestMapping(params = ...)</code> 条件参数未参与 URL 生成的问题；<br/>
-            响应体改为按字节读取并解析 Content-Type 声明的字符集，修复中文乱码，非 JSON 响应内容不再被丢弃；<br/>
-            YAML 配置读取支持 <code>---</code> 多文档分段；完善 <code>List</code> 泛型解析并补齐请求体 JSON 组装逻辑；<br/>
-            相比上游移除了 JSON→POJO 反向生成、Live Template、Spring Boot 代码生成器等模块，聚焦路由解析与 URL 生成。<br/>
-            Go to Service 输入真实 URL 时可直接命中占位符声明（<code>/Engine/FlowBefore/List/2</code> 匹配 <code>/{category}</code>）；<br/>
-            Go to Service 的模块范围与 HTTP 方法筛选改为搜索框内的两个下拉，按项目记忆；替换掉取不到模块时恒为空的 <code>Only This Module</code> 复选框和从未生效的平台漏斗过滤器；<br/>
-            修复选中结果后跳转时的 EDT 读锁异常；隐藏搜索框右侧的"图钉"按钮（Show All in View，对按 URL 跳接口没有意义）。<br/>
-        </li>
-        <li>2.1.6 Stability and performance pass:<br/>
-                  the Services tree scan now runs on a background read action instead of blocking the EDT;<br/>
-                  fixed ClassCastException / IndexOutOfBoundsException / NPE crashes in the Spring and Kotlin resolvers;<br/>
-                  HTTP requests now have connect and read timeouts;<br/>
-                  "Convert to JSON" no longer degrades after a self-referential class is converted;<br/>
-                  server.port / context-path lookup now reads application.yaml and falls through profiles correctly.
-        </li>
-        <li>2.0.8 修复2022.3版本报错问题<br/>黑色主题下请求参数的面板也改为黑色</li>
-        <li>2.0.7 Bug fixed</li>
-        <li>2.0.6 Bug fixed, add Copy Query Param (Key Value)</li>
-        <li>2.0.5 Bug fixed, supported http request OPTIONS,TRACE,CONNECT methods. </li>
-        <li>2.0.4 Fixed NullPointerException with Kotlin project.<br/>
-                  Fixed IllegalArgumentException: No enum constant com.zhaow.restful.method.HttpMethod.HEAD <br/>
-                  Supported Kotlin 1.2 level. </li>
-        <li>2.0.3 Improvements in navigate service(url), auto pasted copied http url to from clipboard.<br/>
-                  Bug fixed.<br/> </li>
-        <li>2.0.2 Match mapped URLs for Controllers without @RequestMapping annotations;<br/>
-                  Supported mapped URLs for Controllers extended supper Object with @RequestMapping annotations.<br/>
-                  Added Popup Menus ( "Copy Full Url", "Jump to Source") for service nodes.
-        </li>
-        <li>2.0.1 Fixed JSON generation issue with POJO contains array fields;
-        </li>
-        <li>2.0 Add Kotlin language supported;<br>
-                Fixed some bugs.
-        </li>
-        <li>1.1 Supported JAX-RS;<br>
-               Format JSON data , use "Command + Enter" on Mac
-               (增强 POJO 生成 json 功能,处理 List、Enum等类型，处理自关联场景);<br>
-               Fixed some bugs.<br>
-       </li>
-       <li>1.0.9 Service url navigation: matched restful style request mappings (e.g.:"/product/{productId}");<br>
-       </li>
-       <li>1.0.8 Bug fixed </li>
-       <li>1.0.7 Match more mapped URLs ; (识别更多映射)<br>
-                 Replaced icons;<br>
-                 Add "Convert to JSON (Compressed)" function to java class;
-       </li>
-       <li>1.0.6 Compatible with IDEA 2016 (兼容 IDEA 2016) </li>
-       <li>1.0.5 修复发送请求IDE卡死的问题. </li>
-       <li>1.0.4 Format Date type (格式化 Date 类型) </li>
-       <li>1.0.3 Small cleanup some code. </li>
+        <li>1.0.1 支持 IntelliJ IDEA 2026.3；Go to Service 新增 <code>Ctrl .</code> 快捷键（<code>Ctrl \</code> 已被新版 Junie 占用，原快捷键保留）。</li>
+        <li>1.0.0 独立版本线起点：支持 IDEA 2022.2 ~ 2026.2；搜索窗口改版（工具栏筛选、紧凑列表、真实 URL 命中占位符）；恢复 Kotlin Spring 路由解析；多路径 URL 生成与复制；修复响应中文乱码；完善 YAML 多文档与请求体 JSON 组装；移除 JSON→POJO、Live Template、代码生成器模块。</li>
+        <li>本分支是 RestfulToolkit（作者 mrmanzhaow）及 RestfulToolkit-fix 的维护分支，沿用 Apache-2.0 授权。上游 1.0.3 ~ 2.1.6 的完整更新记录见<a href="https://github.com/Toby-wxu/RestfulToolkit-air#readme">项目 README</a>。</li>
     ]]>
     </change-notes>
 
@@ -168,6 +120,7 @@
                 icon="AllIcons.Actions.Search">
             <add-to-group group-id="GoToTargetEx" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl BACK_SLASH"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl PERIOD"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt N"/>
         </action>
 
