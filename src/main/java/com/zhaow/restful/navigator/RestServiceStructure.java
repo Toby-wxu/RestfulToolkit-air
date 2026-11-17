@@ -3,6 +3,7 @@ package com.zhaow.restful.navigator;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.java.JavaLanguage;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.Logger;
@@ -15,6 +16,8 @@ import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.ui.treeStructure.SimpleTree;
 import com.intellij.util.OpenSourceUtil;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import com.intellij.util.concurrency.Invoker;
+import com.intellij.util.concurrency.InvokerSupplier;
 import com.zhaow.restful.common.KtFunctionHelper;
 import com.zhaow.restful.common.PsiMethodHelper;
 import com.zhaow.restful.common.ToolkitIcons;
@@ -237,11 +240,20 @@ public class RestServiceStructure {
      * Children are created on demand, so expanding a module only allocates the nodes the user
      * actually opens. {@link AsyncTreeModel} calls into this from a pooled thread.
      */
-    private final class ServiceTreeModel implements TreeModel {
+    private final class ServiceTreeModel implements TreeModel, InvokerSupplier, Disposable {
         private final List<TreeModelListener> myListeners = new ArrayList<>();
         private final RootNode myRoot = new RootNode();
-        private List<ModuleNode> myModules = List.of();
+        private volatile List<ModuleNode> myModules = List.of();
         private int myServiceCount;
+
+        @Override
+        public @NotNull Invoker getInvoker() {
+            return Invoker.forBackgroundThreadWithReadAction(this);
+        }
+
+        @Override
+        public void dispose() {
+        }
 
         void setModules(@NotNull List<RestServiceProject> projects) {
             List<ModuleNode> modules = new ArrayList<>(projects.size());

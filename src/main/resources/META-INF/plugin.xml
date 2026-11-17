@@ -36,6 +36,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <li>1.0.2 修复打开 Services 工具窗时的线程模型报错（Background invoker shall not be EDT），接口树改为后台读动作线程加载。</li>
         <li>1.0.1 支持 IntelliJ IDEA 2026.3；Go to Service 新增 <code>Ctrl .</code> 快捷键（<code>Ctrl \</code> 已被新版 Junie 占用，原快捷键保留）。</li>
         <li>1.0.0 独立版本线起点：支持 IDEA 2022.2 ~ 2026.2；搜索窗口改版（工具栏筛选、紧凑列表、真实 URL 命中占位符）；恢复 Kotlin Spring 路由解析；多路径 URL 生成与复制；修复响应中文乱码；完善 YAML 多文档与请求体 JSON 组装；移除 JSON→POJO、Live Template、代码生成器模块。</li>
         <li>本分支是 RestfulToolkit（作者 mrmanzhaow）及 RestfulToolkit-fix 的维护分支，沿用 Apache-2.0 授权。上游 1.0.3 ~ 2.1.6 的完整更新记录见<a href="https://github.com/Toby-wxu/RestfulToolkit-air#readme">项目 README</a>。</li>

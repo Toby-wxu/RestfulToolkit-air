@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.fengjianliang.restful.toolkit"
-version = "1.0.1"
+version = "1.0.2"
 
 java {
     // Resolved from the local JDK or a downloaded one; never hardcode org.gradle.java.home,

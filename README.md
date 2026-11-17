@@ -35,7 +35,7 @@
 | 插件平台 | JetBrains IntelliJ Platform Gradle Plugin 2.13.0 |
 | 依赖插件 | Java、Kotlin、Properties、YAML（IDEA 内置，无需额外安装） |
 
-插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.1`。Java 源码包名沿用上游的 `com.zhaow.*`。
+插件 ID `com.fengjianliang.restful.toolkit`，当前版本 `1.0.2`。Java 源码包名沿用上游的 `com.zhaow.*`。
 
 搜索窗口使用以下规则，**安装范围和界面切换是两项独立判断**：
 
@@ -74,7 +74,7 @@
 **方式二：本地构建后安装**
 
 ```bash
-./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-1.0.1.zip
+./gradlew buildPlugin          # 产物在 build/distributions/RestfulToolkit-air-1.0.2.zip
 ```
 
 然后 `Settings ▸ Plugins ▸ ⚙ ▸ Install Plugin from Disk...` 选择该 zip。
@@ -259,7 +259,7 @@ src/test/java/com/zhaow/utils/ToolkitUtilTest
 2022.2 的二进制兼容检查使用 [JetBrains 官方独立 Plugin Verifier](https://github.com/JetBrains/intellij-plugin-verifier)，下载其 `verifier-cli-<version>-all.jar` 并解压 IDEA 2022.2.5 后运行：
 
 ```bash
-java -jar <verifier-all.jar> check-plugin build/distributions/RestfulToolkit-air-1.0.1.zip <IDEA-2022.2.5目录> -verification-reports-dir build/reports/legacyPluginVerifier
+java -jar <verifier-all.jar> check-plugin build/distributions/RestfulToolkit-air-1.0.2.zip <IDEA-2022.2.5目录> -verification-reports-dir build/reports/legacyPluginVerifier
 ```
 
 版本范围包含的其他 IDEA 版本仍建议在发布前补充验证，尤其是 2026.3。
